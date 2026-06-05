@@ -15,8 +15,9 @@ longpoll = VkLongPoll(vk_session)
 
 def send(id, text):
     if config.is_client:
-        return
-    vk.messages.send(user_id=id, message=text, random_id=0)
+        print(text)
+    else:
+        vk.messages.send(user_id=id, message=text, random_id=0)
 
 def dt2str(dt):
     return str(dt) if dt else None
@@ -51,6 +52,7 @@ class OlcrtcController(BaseProcess):
 
     def _make_config(self, provider:(str,str)):
         if config.is_client:
+            file_name = 'wb-cnc.yaml'
             res =f"""
 mode: cnc
 auth:
@@ -64,7 +66,7 @@ net:
   dns: "8.8.8.8:53"
 socks:
   host: "127.0.0.1"
-  port: 8808
+  port: {config.socks_port}
 data: data
 liveness:
   interval: 10s
@@ -72,6 +74,7 @@ liveness:
   failures: 3
 """
         else:
+            file_name = 'wb-srv.yaml'
             res =f"""
 mode: srv
 auth:
@@ -89,8 +92,6 @@ liveness:
   timeout: 5s
   failures: 3
 """
-
-        file_name = 'wb-srv.yaml'
         with open(file_name, 'w') as f:
             f.write(res)
         return file_name
