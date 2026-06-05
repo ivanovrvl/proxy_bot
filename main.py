@@ -14,6 +14,8 @@ vk = vk_session.get_api()
 longpoll = VkLongPoll(vk_session)
 
 def send(id, text):
+    if config.is_client:
+        return
     vk.messages.send(user_id=id, message=text, random_id=0)
 
 def dt2str(dt):
@@ -48,10 +50,29 @@ class OlcrtcController(BaseProcess):
         self.__process__.terminate()
 
     def _make_config(self, provider:(str,str)):
-        file_name = 'wb-srv.yaml'
-        with open(file_name, 'w') as f:
-            f.write(
-f"""
+        if config.is_client:
+            res =f"""
+mode: cnc
+auth:
+  provider: {provider[0]}
+room:
+  id: "{provider[1]}"
+crypto:
+  key: "{config.olcrtc_key}"
+net:
+  transport: vp8channel
+  dns: "8.8.8.8:53"
+socks:
+  host: "127.0.0.1"
+  port: 8808
+data: data
+liveness:
+  interval: 10s
+  timeout: 5s
+  failures: 3
+"""
+        else:
+            res =f"""
 mode: srv
 auth:
   provider: {provider[0]}
@@ -63,8 +84,15 @@ net:
   transport: vp8channel
   dns: "8.8.8.8:53"
 data: data
+liveness:
+  interval: 10s
+  timeout: 5s
+  failures: 3
 """
-            )
+
+        file_name = 'wb-srv.yaml'
+        with open(file_name, 'w') as f:
+            f.write(res)
         return file_name
 
     def _process(self):
