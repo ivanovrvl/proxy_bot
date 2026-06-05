@@ -144,21 +144,20 @@ for event in longpoll.listen():
         if event.to_me:
             msg:str = event.text.lower()
             id = event.user_id
+            if config.is_client:
+                time.sleep(3)
             if msg == '/s':
                 send(id, json.dumps(olc.get_status(), indent=4))
             elif msg.startswith('/wb '):
-                if config.is_client:
-                    time.sleep(3)
                 olc.set_provider(('wbstream', msg[4:].strip()))
                 send(id, "Ok")
             elif msg.startswith('/tm '):
-                if config.is_client:
-                    time.sleep(3)
                 olc.set_provider(('telemost', msg[4:].strip()))
                 send(id, "Ok")
+            elif msg.startswith('/n'):
+                olc.set_provider(None)
+                send(id, "Ok")
             elif msg == '/r':
-                if config.is_client:
-                    time.sleep(3)
                 olc.restart()
                 send(id, "Ok")
             else:
