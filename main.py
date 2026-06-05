@@ -15,7 +15,7 @@ vk = vk_session.get_api()
 longpoll = VkLongPoll(vk_session)
 
 def send(id, text):
-    text = ("CNC:" if config.is_client else "SVR:") + " " + text
+    text = ("C:" if config.is_client else "") + " " + text
     vk.messages.send(user_id=id, message=text, random_id=0)
 
 def dt2str(dt):
@@ -144,18 +144,23 @@ for event in longpoll.listen():
         if event.to_me:
             msg:str = event.text.lower()
             id = event.user_id
-            if config.is_client:
-                time.sleep(5)
             if msg == '/s':
                 send(id, json.dumps(olc.get_status(), indent=4))
             elif msg.startswith('/wb '):
+                if config.is_client:
+                    time.sleep(3)
                 olc.set_provider(('wbstream', msg[4:].strip()))
                 send(id, "Ok")
             elif msg.startswith('/tm '):
+                if config.is_client:
+                    time.sleep(3)
                 olc.set_provider(('telemost', msg[4:].strip()))
                 send(id, "Ok")
             elif msg == '/r':
+                if config.is_client:
+                    time.sleep(3)
                 olc.restart()
                 send(id, "Ok")
             else:
-                send(id, "Unknown command")
+                if not config.is_client:
+                    send(id, "Unknown command")
