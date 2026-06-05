@@ -29,7 +29,6 @@ class OlcrtcController(BaseProcess):
         self.__process__ = None
         self._exit_code = None
         self._provider:(str,str) = None
-        self._current_provider:(str,str) = None
         self._process_stopped = None
         self._process_started = None
         self._restart = False
@@ -99,37 +98,38 @@ liveness:
 
         has_process = self._check_process()
         if has_process:
-            if self._restart or (self._current_provider != self._provider):
+            if self._restart:
                 self.__process__.terminate()
                 self.schedule_delay(1)
             else:
                 self.schedule_delay(10)
         else:
-            provider = self._provider
             self._restart = False
+            provider = self._provider
             if provider:
                 #subprocess.Popen(commands, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd = cwd, env = env)
+                print("Start process")
                 config_file = self._make_config(provider)
                 command = ["olcrtc-windows-amd64.exe" if sys.platform == "win32" else "./olcrtc-linux-amd64", config_file]
                 self.__process__ = subprocess.Popen(command, stderr=subprocess.STDOUT)
                 self._process_started = datetime.now()
                 self.schedule_delay(3)
-                self._current_provider = provider
 
     def set_provider(self, provider:(str,str)):
         if provider == self._provider:
             return
         self._provider = provider
-        self.signal()
+        self.restart()
 
     def restart(self):
-        self._restart = True
-        self.signal()
+        if not self._restart:
+            self._restart = True
+            self.signal()
 
     def get_status(self)->dict:
         return {
             "has_process": self.__process__ is not None,
-            "provider": self._current_provider,
+            "provider": self._provider,
             "process_started": dt2str(self._process_started),
             "process_stopped": dt2str(self._process_stopped),
             "last_error": str(self.get_last_error()),
