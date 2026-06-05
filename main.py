@@ -1,5 +1,6 @@
 import json
 import sys
+import time
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 import config
@@ -14,10 +15,8 @@ vk = vk_session.get_api()
 longpoll = VkLongPoll(vk_session)
 
 def send(id, text):
-    if config.is_client:
-        print(text)
-    else:
-        vk.messages.send(user_id=id, message=text, random_id=0)
+    text = ("CNC:" if config.is_client else "SVR:") + " " + text
+    vk.messages.send(user_id=id, message=text, random_id=0)
 
 def dt2str(dt):
     return str(dt) if dt else None
@@ -145,6 +144,8 @@ for event in longpoll.listen():
         if event.to_me:
             msg:str = event.text.lower()
             id = event.user_id
+            if config.is_client:
+                time.sleep(5)
             if msg == '/s':
                 send(id, json.dumps(olc.get_status(), indent=4))
             elif msg.startswith('/wb '):
