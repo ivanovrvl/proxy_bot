@@ -1,0 +1,11 @@
+services:
+  server:
+    restart: unless-stopped
+    build: .
+    command: python main.py
+    volumes:
+      - .:/code
+
+networks:
+  default:
+    driver: bridge
