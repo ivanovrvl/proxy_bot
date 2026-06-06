@@ -27,7 +27,7 @@ class OlcrtcController(BaseProcess):
         super().__init__()
         self.sleep_on_error = 5
         self.__process__ = None
-        self._exit_code = None
+        self._last_exit_code = None
         self._provider:(str,str) = None
         self._process_stopped = None
         self._process_started = None
@@ -36,9 +36,10 @@ class OlcrtcController(BaseProcess):
     def _check_process(self)->bool:
         if not self.__process__:
             return False
-        self._exit_code = self.__process__.poll()
-        if self._exit_code is not None:
+        exit_code = self.__process__.poll()
+        if exit_code is not None:
             self.__process__ = None
+            self._last_exit_code = exit_code
             self._process_stopped = datetime.now()
             return False
         return True
@@ -132,6 +133,7 @@ liveness:
             "provider": self._provider,
             "process_started": dt2str(self._process_started),
             "process_stopped": dt2str(self._process_stopped),
+            "last_exit_code": self._last_exit_code,
             "last_error": str(self.get_last_error()),
             "restarting": self._restart,
         }
