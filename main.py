@@ -144,24 +144,25 @@ olc.start()
 for event in longpoll.listen():
     if event.type == VkEventType.MESSAGE_NEW:
         if event.to_me:
-            msg:str = event.text.lower()
-            id = event.user_id
-            if config.is_client:
-                time.sleep(3)
-            if msg == '/s':
-                send(id, json.dumps(olc.get_status(), indent=4))
-            elif msg.startswith('/wb '):
-                olc.set_provider(('wbstream', msg[4:].strip()))
-                send(id, "Ok")
-            elif msg.startswith('/tm '):
-                olc.set_provider(('telemost', msg[4:].strip()))
-                send(id, "Ok")
-            elif msg.startswith('/n'):
-                olc.set_provider(None)
-                send(id, "Ok")
-            elif msg == '/r':
-                olc.restart()
-                send(id, "Ok")
-            else:
-                if not config.is_client:
-                    send(id, "Unknown command")
+            if event.type == VkEventType.MESSAGE_NEW:
+                id = event.user_id
+                msg:str = event.text.lower()
+                if config.is_client:
+                    time.sleep(3)
+                if msg == '/s':
+                    send(id, json.dumps(olc.get_status(), indent=4))
+                elif msg.startswith('/wb '):
+                    olc.set_provider(('wbstream', msg[4:].strip()))
+                    send(id, "Ok")
+                elif msg.startswith('/tm '):
+                    olc.set_provider(('telemost', msg[4:].strip()))
+                    send(id, "Ok")
+                elif msg.startswith('/n'):
+                    olc.set_provider(None)
+                    send(id, "Ok")
+                elif msg == '/r':
+                    olc.restart()
+                    send(id, "Ok")
+                else:
+                    if not config.is_client:
+                        send(id, "Unknown command")
