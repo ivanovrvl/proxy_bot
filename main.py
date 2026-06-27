@@ -48,6 +48,14 @@ def parse_provider_cmd(cmd:str) -> tuple[str,str]:
     if m:
         return ('telemost', m.group(1))
 
+def get_exe_file():
+    if sys.platform == "win32":
+        return "olcrtc-windows-amd64.exe"
+    elif sys.platform.startswith("freebsd"):
+        return "./olcrtc-freebsd-amd64"
+    else:
+        return "./olcrtc-linux-amd64"
+
 class OlcrtcController(BaseProcess):
 
     def __init__(self):
@@ -104,7 +112,7 @@ class OlcrtcController(BaseProcess):
                 #subprocess.Popen(commands, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd = cwd, env = env)
                 print("Start process")
                 config_file = self._make_config(provider)
-                command = ["olcrtc-windows-amd64.exe" if sys.platform == "win32" else "./olcrtc-linux-amd64", config_file]
+                command = [get_exe_file(), config_file]
                 self.__process__ = subprocess.Popen(command, stderr=subprocess.STDOUT)
                 self._process_started = datetime.now()
                 self.schedule_delay(3)
