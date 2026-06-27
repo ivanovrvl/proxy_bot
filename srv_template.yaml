@@ -1,0 +1,16 @@
+mode: srv
+auth:
+  provider: $provider
+room:
+  id: "$room_id"
+crypto:
+  key: "$olcrtc_key"
+net:
+  transport: vp8channel
+  dns: "8.8.8.8:53"
+data: data
+liveness:
+  interval: 10s
+  timeout: 5s
+  failures: 3
+ 

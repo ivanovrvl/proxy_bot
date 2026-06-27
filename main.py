@@ -1,5 +1,6 @@
 import json
 import sys
+import re
 import time
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
@@ -8,11 +9,14 @@ from utils import BaseProcess
 from threading import Event
 import subprocess
 from datetime import datetime
+from string import Template
 
 vk_session = vk_api.VkApi(token=config.vk_token)
 #vk_api.VkApi(token='Ваш токен') #Для остальных
 vk = vk_session.get_api()
 longpoll = VkLongPoll(vk_session)
+
+last_provider_filename = "last_provider.json"
 
 def send(id, text):
     text = ("C:" if config.is_client else "") + " " + text
@@ -21,6 +25,29 @@ def send(id, text):
 def dt2str(dt):
     return str(dt) if dt else None
 
+template_file = "cnc_template.yaml" if config.is_client else "srv_template.yaml"
+with open(template_file, 'r', encoding="utf-8") as f:
+    config_template = Template(f.read())
+
+re1 = re.compile(r"https://stream\.wb\.ru/room/([0-9abcdef\-]+)\s*$")
+re2 = re.compile(r"wbstream://([0-9abcdef\-]+)\s*$")
+re3 = re.compile(r"https://telemost\.360\.yandex\.ru/j/([0-9]+)\s*$")
+
+def parse_provider_cmd(cmd:str) -> tuple[str,str]:
+    if cmd.startswith('/wb'):
+        return ('wbstream', cmd[4:].strip())
+    if cmd.startswith('/tm'):
+        return ('telemost', cmd[4:].strip())
+    m = re1.match(cmd)
+    if m:
+        return ('wbstream', m.group(1))    
+    m = re2.match(cmd)
+    if m:
+        return ('wbstream', m.group(1))
+    m = re3.match(cmd)
+    if m:
+        return ('telemost', m.group(1))
+
 class OlcrtcController(BaseProcess):
 
     def __init__(self):
@@ -28,6 +55,7 @@ class OlcrtcController(BaseProcess):
         self.sleep_on_error = 5
         self.__process__ = None
         self._last_exit_code = None
+        self._save_provider = False
         self._provider:(str,str) = None
         self._process_stopped = None
         self._process_started = None
@@ -50,49 +78,14 @@ class OlcrtcController(BaseProcess):
         self.__process__.terminate()
 
     def _make_config(self, provider:(str,str)):
-        if config.is_client:
-            file_name = 'wb-cnc.yaml'
-            res =f"""
-mode: cnc
-auth:
-  provider: {provider[0]}
-room:
-  id: "{provider[1]}"
-crypto:
-  key: "{config.olcrtc_key}"
-net:
-  transport: vp8channel
-  dns: "8.8.8.8:53"
-socks:
-  host: "127.0.0.1"
-  port: {config.socks_port}
-data: data
-liveness:
-  interval: 10s
-  timeout: 5s
-  failures: 3
-"""
-        else:
-            file_name = 'wb-srv.yaml'
-            res =f"""
-mode: srv
-auth:
-  provider: {provider[0]}
-room:
-  id: "{provider[1]}"
-crypto:
-  key: "{config.olcrtc_key}"
-net:
-  transport: vp8channel
-  dns: "8.8.8.8:53"
-data: data
-liveness:
-  interval: 10s
-  timeout: 5s
-  failures: 3
-"""
+        par = {
+            "provider": provider[0],
+            "room_id": provider[1],
+            "olcrtc_key": config.olcrtc_key,
+        }
+        file_name = 'cnc.yaml' if config.is_client else 'srv.yaml'
         with open(file_name, 'w') as f:
-            f.write(res)
+            f.write(config_template.substitute(par))
         return file_name
 
     def _process(self):
@@ -115,10 +108,23 @@ liveness:
                 self.__process__ = subprocess.Popen(command, stderr=subprocess.STDOUT)
                 self._process_started = datetime.now()
                 self.schedule_delay(3)
+            if self._save_provider:
+                self._save_provider = False
+                self.save_provider(provider)
 
-    def set_provider(self, provider:(str,str)):
-        if provider == self._provider:
+    def save_provider(self, provider):
+        if last_provider_filename:
+            try:
+                with open(last_provider_filename, 'w') as f:
+                    json.dump(provider, f)
+            except Exception as e:
+                print(str(e))
+
+    def set_provider(self, provider:tuple[str,str], save:bool=False):
+        if provider == self._provider:        
             return
+        if save:
+            self._save_provider = True
         self._provider = provider
         self.restart()
 
@@ -141,6 +147,17 @@ liveness:
 olc = OlcrtcController()
 olc.start()
 
+if last_provider_filename:
+    last_provider = None
+    try:
+        with open(last_provider_filename, 'r') as f:
+            tmp = json.load(f)
+            last_provider = (tmp[0], tmp[1])
+    except Exception as e:
+        print(str(e))
+    if last_provider:
+        olc.set_provider(last_provider)
+
 for event in longpoll.listen():
     if event.type == VkEventType.MESSAGE_NEW:
         if event.to_me:
@@ -151,12 +168,6 @@ for event in longpoll.listen():
                     time.sleep(3)
                 if msg == '/s':
                     send(id, json.dumps(olc.get_status(), indent=4))
-                elif msg.startswith('/wb '):
-                    olc.set_provider(('wbstream', msg[4:].strip()))
-                    send(id, "Ok")
-                elif msg.startswith('/tm '):
-                    olc.set_provider(('telemost', msg[4:].strip()))
-                    send(id, "Ok")
                 elif msg.startswith('/n'):
                     olc.set_provider(None)
                     send(id, "Ok")
@@ -164,5 +175,9 @@ for event in longpoll.listen():
                     olc.restart()
                     send(id, "Ok")
                 else:
-                    if not config.is_client:
+                    p = parse_provider_cmd(msg)
+                    if p:
+                        olc.set_provider(p, save=True)
+                        send(id, "Ok")
+                    elif not config.is_client:
                         send(id, "Unknown command")
