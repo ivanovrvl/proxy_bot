@@ -6,5 +6,3 @@ debug = False
 vk_token="?"
 
 olcrtc_key = "?"
-
-socks_port=8808
