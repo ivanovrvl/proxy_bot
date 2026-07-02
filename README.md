@@ -1,4 +1,4 @@
-* В корневую папку подложить исполняемый файл olcrtc, соответствующий окружению. Разрешить выполнение (chmod +x). Имена файлов видны в реализации метода def get_exe_file() в main.oy
+* В корневую папку подложить исполняемый файл olcrtc, соответствующий окружению и разрешить выполнение (chmod +x). Имена файлов видны в реализации метода def get_exe_file() в main.oy
 * В VK создать и настроить бота как описано [тут](https://github.com/kulikov0/whitelist-bypass/blob/main/docs/SETUP.md#%D0%B1%D0%BE%D1%82-vk)
 * В config.py для клиента и сервера прописать параметры vk_token и olcrtc_key (ключ шифрования olcrts, openssl rand -hex 32)
 * Для клиента в config.py должно быть is_client=True и указан socks_port (порт прокси для внешних программ)
