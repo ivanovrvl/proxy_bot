@@ -2,7 +2,7 @@ is_client = True
 
 debug = False
 
-# Бот 2
+# Токен бота VK
 vk_token="?"
 
 olcrtc_key = "?"
